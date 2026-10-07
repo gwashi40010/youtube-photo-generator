@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Photo Card Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Anton&family=Montserrat:wght@300;400;500;700&family=Quicksand:wght@300..700&family=M+PLUS+Rounded+1c:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m14.31 8 5.74 9.9"/><path d="m9.69 8 6 10.4"/><path d="m11.75 4-5.75 10"/><path d="M12 22 9.64 12"/><path d="m20 12-10 5.75"/><path d="m3.66 12 10.34-6"/></svg>
+        <h1>YouTube Photo Card Generator</h1>
+      </div>
+      <p class="subtitle">写真を16:9にリサイズし、ぼかし背景と撮影メタデータを美しく合成します。</p>
+    </header>
+
+    <main class="app-content">
+      <section class="controls-panel card">
+        <div class="panel-section">
+          <h2>1. 写真をアップロード</h2>
+          <div id="drop-zone" class="drop-zone">
+            <input type="file" id="image-input" accept="image/*" class="file-input">
+            <div class="drop-zone-prompt">
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              <span>画像をドラッグ＆ドロップ、またはクリックして選択</span>
+              <span class="file-limits">JPEG, PNG, HEICなど</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="editor-controls" class="editor-controls disabled">
+          <div class="panel-section">
+            <h2>2. カメラ情報 (EXIF)</h2>
+            <p class="section-desc">自動読み込みされた情報です。必要に応じて編集できます。</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="input-make">メーカー名</label>
+                <input type="text" id="input-make" placeholder="例: SONY, Canon">
+              </div>
+              <div class="form-group">
+                <label for="input-model">機種名</label>
+                <input type="text" id="input-model" placeholder="例: ILCE-7M4">
+              </div>
+              <div class="form-group col-span-2">
+                <label for="input-lens">レンズ名</label>
+                <input type="text" id="input-lens" placeholder="例: FE 35mm F1.4 GM">
+              </div>
+              <div class="form-group">
+                <label for="input-focal-length">焦点距離</label>
+                <input type="text" id="input-focal-length" placeholder="例: 35mm">
+              </div>
+              <div class="form-group">
+                <label for="input-f-number">F値</label>
+                <input type="text" id="input-f-number" placeholder="例: f/1.4">
+              </div>
+              <div class="form-group">
+                <label for="input-exposure-time">シャッタースピード</label>
+                <input type="text" id="input-exposure-time" placeholder="例: 1/250s">
+              </div>
+              <div class="form-group">
+                <label for="input-iso">ISO値</label>
+                <input type="text" id="input-iso" placeholder="例: 100">
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h2>3. デザイン調整</h2>
+
+            <div class="control-group">
+              <label for="select-aspect-ratio">出力アスペクト比</label>
+              <select id="select-aspect-ratio">
+                <option value="16-9" selected>16:9 (横動画用 - 1920 × 1080)</option>
+                <option value="4-3">4:3 (横動画用 - 1440 × 1080)</option>
+                <option value="9-16">9:16 (ショート/縦動画用 - 1080 × 1920)</option>
+                <option value="3-4">3:4 (Instagram/縦型 - 1080 × 1440)</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-blur">背景のぼかし強度</label>
+                <span id="value-blur">30px</span>
+              </div>
+              <input type="range" id="slider-blur" min="0" max="100" value="30">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-brightness">背景の明るさ</label>
+                <span id="value-brightness">70%</span>
+              </div>
+              <input type="range" id="slider-brightness" min="10" max="100" value="70">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-scale">写真の表示サイズ (内側)</label>
+                <span id="value-scale">95%</span>
+              </div>
+              <input type="range" id="slider-scale" min="50" max="100" value="95">
+            </div>
+
+            <div class="control-group">
+              <label for="select-frame-type">写真のフレーム</label>
+              <select id="select-frame-type">
+                <option value="white" selected>ホワイトフレーム</option>
+                <option value="none">なし (シャドウのみ)</option>
+                <option value="black">ブラックフレーム</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-frame-size">フレームの太さ</label>
+                <span id="value-frame-size">10px</span>
+              </div>
+              <input type="range" id="slider-frame-size" min="2" max="50" value="10">
+            </div>
+
+            <div class="control-group">
+              <label for="select-text-theme">テキストテーマ</label>
+              <select id="select-text-theme">
+                <option value="white-shadow">ホワイト (影あり)</option>
+                <option value="white-bg">ホワイト (半透明黒背景付き)</option>
+                <option value="black-shadow">ブラック (影あり)</option>
+                <option value="black-bg">ブラック (半透明白背景付き)</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label for="select-font-family">テキストフォント</label>
+              <select id="select-font-family">
+                <option value="sans-serif" selected>ゴシック体 (標準 / シンプル)</option>
+                <option value="serif">明朝体 (上品 / 和風)</option>
+                <option value="display">インパクト (力強い / 太字)</option>
+                <option value="rounded">丸ゴシック体 (ポップ / かわいい)</option>
+                <option value="mono">等幅フォント (カメラ・レトロ風)</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-text-size">テキストサイズ (撮影情報)</label>
+                <span id="value-text-size">36px</span>
+              </div>
+              <input type="range" id="slider-text-size" min="16" max="64" value="36">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-text-x">テキスト左右位置 (X)</label>
+                <span id="value-text-x">80px</span>
+              </div>
+              <input type="range" id="slider-text-x" min="0" max="1920" value="80">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-text-y">テキスト上下位置 (Y)</label>
+                <span id="value-text-y">1000px</span>
+              </div>
+              <input type="range" id="slider-text-y" min="0" max="1920" value="1000">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-custom-text-size">カスタムテキストサイズ</label>
+                <span id="value-custom-text-size">24px</span>
+              </div>
+              <input type="range" id="slider-custom-text-size" min="16" max="64" value="24">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-custom-text-x">カスタムテキスト左右位置 (X)</label>
+                <span id="value-custom-text-x">1840px</span>
+              </div>
+              <input type="range" id="slider-custom-text-x" min="0" max="1920" value="1840">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label-wrapper">
+                <label for="slider-custom-text-y">カスタムテキスト上下位置 (Y)</label>
+                <span id="value-custom-text-y">1000px</span>
+              </div>
+              <input type="range" id="slider-custom-text-y" min="0" max="1920" value="1000">
+            </div>
+
+            <div class="control-group">
+              <label for="input-custom-text">カスタムテキスト (右上などに表示)</label>
+              <input type="text" id="input-custom-text" placeholder="例: © Toshiyuki, 撮影場所など">
+            </div>
+
+            <div class="control-group">
+              <label for="select-image-format">保存フォーマット</label>
+              <select id="select-image-format">
+                <option value="jpeg" selected>JPEG (.jpg) - 高画質圧縮</option>
+                <option value="png">PNG (.png) - 劣化なし</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button id="download-btn" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              画像をダウンロード (16:9)
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview-panel">
+        <div class="preview-header">
+          <h2 id="preview-title">プレビュー (16:9)</h2>
+          <span id="preview-dimensions" class="dimensions-indicator">1920 × 1080 (Full HD)</span>
+        </div>
+        <div class="canvas-container card">
+          <canvas id="preview-canvas" width="1920" height="1080"></canvas>
+          <div id="empty-preview" class="empty-preview">
+            <p>写真をアップロードすると、ここにプレビューが表示されます。</p>
+          </div>
+        </div>
+        <div class="preview-tips">
+          <p id="download-tip">※ ダウンロードされる画像は 1920×1080 ピクセルの高画質画像になります。</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>&copy; 2026 YouTube Photo Card Generator. Powered by Toshiyuki & Antigravity</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
